@@ -18,7 +18,7 @@ interface CertificateWithProfile {
     username: string;
     display_name: string;
     avatar_url: string | null;
-  };
+  } | null;
 }
 
 const Explore = () => {
@@ -31,7 +31,7 @@ const Explore = () => {
         .from('certificates')
         .select(`
           *,
-          profiles!inner (
+          profiles (
             username,
             display_name,
             avatar_url
@@ -40,17 +40,25 @@ const Explore = () => {
         .eq('is_public', true)
         .order('created_at', { ascending: false });
       
-      if (error) throw error;
-      return data as CertificateWithProfile[];
+      if (error) {
+        console.error('Error fetching certificates:', error);
+        throw error;
+      }
+      
+      // Filter out certificates without valid profiles
+      const validCertificates = data?.filter(cert => cert.profiles && !Array.isArray(cert.profiles)) || [];
+      return validCertificates as CertificateWithProfile[];
     }
   });
 
-  const filteredCertificates = certificates.filter(cert =>
-    cert.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    cert.issuer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    cert.profiles.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    cert.profiles.display_name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredCertificates = certificates.filter(cert => {
+    if (!cert.profiles) return false;
+    
+    return cert.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           cert.issuer.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           cert.profiles.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           cert.profiles.display_name.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
@@ -92,58 +100,62 @@ const Explore = () => {
 
         {/* Certificates Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCertificates.map((cert) => (
-            <div key={cert.id} className="bg-gray-800 rounded-2xl p-6 border border-gray-700 hover:border-gray-600 transition-colors group">
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-                    {cert.profiles.avatar_url ? (
-                      <img src={cert.profiles.avatar_url} alt={cert.profiles.display_name} className="w-10 h-10 rounded-full object-cover" />
-                    ) : (
-                      getInitials(cert.profiles.display_name)
-                    )}
-                  </div>
-                  <div>
-                    <Link to={`/u/${cert.profiles.username}`} className="text-white hover:text-blue-400 font-medium">
-                      {cert.profiles.display_name}
-                    </Link>
-                    <div className="flex items-center text-gray-400 text-sm mt-1">
-                      <Eye className="w-3 h-3 mr-1" />
-                      {cert.views} views
+          {filteredCertificates.map((cert) => {
+            if (!cert.profiles) return null;
+            
+            return (
+              <div key={cert.id} className="bg-gray-800 rounded-2xl p-6 border border-gray-700 hover:border-gray-600 transition-colors group">
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
+                      {cert.profiles.avatar_url ? (
+                        <img src={cert.profiles.avatar_url} alt={cert.profiles.display_name} className="w-10 h-10 rounded-full object-cover" />
+                      ) : (
+                        getInitials(cert.profiles.display_name)
+                      )}
+                    </div>
+                    <div>
+                      <Link to={`/u/${cert.profiles.username}`} className="text-white hover:text-blue-400 font-medium">
+                        {cert.profiles.display_name}
+                      </Link>
+                      <div className="flex items-center text-gray-400 text-sm mt-1">
+                        <Eye className="w-3 h-3 mr-1" />
+                        {cert.views} views
+                      </div>
                     </div>
                   </div>
+                  <Award className="w-6 h-6 text-blue-400" />
                 </div>
-                <Award className="w-6 h-6 text-blue-400" />
+
+                <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-blue-400 transition-colors">
+                  {cert.title}
+                </h3>
+
+                {cert.description && (
+                  <p className="text-gray-400 text-sm mb-3 line-clamp-2">{cert.description}</p>
+                )}
+
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center text-gray-400 text-sm">
+                    <Building className="w-4 h-4 mr-2" />
+                    {cert.issuer}
+                  </div>
+                  <div className="flex items-center text-gray-400 text-sm">
+                    <Calendar className="w-4 h-4 mr-2" />
+                    {new Date(cert.issue_date).toLocaleDateString()}
+                  </div>
+                </div>
+
+                <Link
+                  to={`/c/${cert.id}`}
+                  className="inline-flex items-center justify-center w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors"
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  View Certificate
+                </Link>
               </div>
-
-              <h3 className="text-lg font-semibold text-white mb-2 group-hover:text-blue-400 transition-colors">
-                {cert.title}
-              </h3>
-
-              {cert.description && (
-                <p className="text-gray-400 text-sm mb-3 line-clamp-2">{cert.description}</p>
-              )}
-
-              <div className="space-y-2 mb-4">
-                <div className="flex items-center text-gray-400 text-sm">
-                  <Building className="w-4 h-4 mr-2" />
-                  {cert.issuer}
-                </div>
-                <div className="flex items-center text-gray-400 text-sm">
-                  <Calendar className="w-4 h-4 mr-2" />
-                  {new Date(cert.issue_date).toLocaleDateString()}
-                </div>
-              </div>
-
-              <Link
-                to={`/c/${cert.id}`}
-                className="inline-flex items-center justify-center w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors"
-              >
-                <Eye className="w-4 h-4 mr-2" />
-                View Certificate
-              </Link>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         {filteredCertificates.length === 0 && !isLoading && (
