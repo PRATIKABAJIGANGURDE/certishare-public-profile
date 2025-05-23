@@ -1,245 +1,216 @@
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Share2, Download, Eye, Upload, Copy, Calendar, Building } from "lucide-react";
+import { Award, Calendar, Building, Eye, Share2, Settings } from "lucide-react";
+import Navigation from "../components/Navigation";
 import { Link } from "react-router-dom";
 
-// Mock data - in real app this would come from database
-const mockProfile = {
-  username: "johndoe",
-  name: "John Doe",
-  bio: "Senior Software Engineer passionate about cloud technologies and continuous learning.",
-  avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
-  joinDate: "2024-01-15",
-  totalCertificates: 8,
-  totalViews: 1247
-};
+const Profile = () => {
+  const [activeTab, setActiveTab] = useState("certificates");
 
-const mockCertificates = [
-  {
-    id: "cert-1",
-    title: "AWS Certified Solutions Architect - Associate",
-    issuer: "Amazon Web Services",
-    dateIssued: "2024-03-15",
-    description: "Validates technical expertise in designing distributed applications on AWS.",
-    thumbnail: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=300&h=200&fit=crop",
-    type: "pdf",
-    views: 324,
-    isPublic: true
-  },
-  {
-    id: "cert-2",
-    title: "React Developer Certification",
-    issuer: "Meta",
-    dateIssued: "2024-02-10",
-    description: "Professional React development skills certification from Meta.",
-    thumbnail: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=300&h=200&fit=crop",
-    type: "pdf",
-    views: 186,
-    isPublic: true
-  },
-  {
-    id: "cert-3",
-    title: "Google Cloud Professional Cloud Architect",
-    issuer: "Google Cloud",
-    dateIssued: "2024-01-22",
-    description: "Demonstrates ability to design, develop, and manage robust, secure cloud architecture.",
-    thumbnail: "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=300&h=200&fit=crop",
-    type: "pdf",
-    views: 298,
-    isPublic: true
-  },
-  {
-    id: "cert-4",
-    title: "Kubernetes Administrator (CKA)",
-    issuer: "Cloud Native Computing Foundation",
-    dateIssued: "2023-11-08",
-    description: "Certified Kubernetes Administrator credential validates skills in cluster administration.",
-    thumbnail: "https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=300&h=200&fit=crop",
-    type: "pdf",
-    views: 156,
-    isPublic: true
-  }
-];
-
-const ProfilePage = () => {
-  const [showShareModal, setShowShareModal] = useState(false);
-  const [copiedLink, setCopiedLink] = useState("");
-
-  const profileUrl = `${window.location.origin}/u/${mockProfile.username}`;
-
-  const copyToClipboard = (text: string, type: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedLink(type);
-    setTimeout(() => setCopiedLink(""), 2000);
+  // Mock user data
+  const user = {
+    name: "John Doe",
+    username: "johndoe",
+    email: "john.doe@example.com",
+    avatar: "JD",
+    bio: "Full-stack developer passionate about cloud technologies and continuous learning.",
+    joinDate: "January 2024",
+    totalViews: 1547,
+    totalCertificates: 8
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
+  // Mock certificates data
+  const certificates = [
+    {
+      id: "cert1",
+      title: "AWS Certified Solutions Architect",
+      issuer: "Amazon Web Services",
+      date: "2024-01-15",
+      views: 245,
+      type: "pdf",
+      isPublic: true
+    },
+    {
+      id: "cert2",
+      title: "React Developer Certification",
+      issuer: "Meta",
+      date: "2024-02-10",
+      views: 189,
+      type: "image",
+      isPublic: true
+    },
+    {
+      id: "cert3",
+      title: "Docker Certified Associate",
+      issuer: "Docker Inc.",
+      date: "2024-03-05",
+      views: 156,
+      type: "pdf",
+      isPublic: false
+    }
+  ];
+
+  const copyProfileLink = () => {
+    navigator.clipboard.writeText(`${window.location.origin}/u/${user.username}`);
+    // In real app, show toast notification
+    alert("Profile link copied to clipboard!");
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <Link to="/" className="text-blue-600 hover:text-blue-700">
-              ← Back to Home
-            </Link>
-            <div className="flex items-center space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => copyToClipboard(profileUrl, "profile")}
-                className="flex items-center space-x-2"
-              >
-                {copiedLink === "profile" ? (
-                  <>
-                    <Copy className="w-4 h-4" />
-                    <span>Copied!</span>
-                  </>
-                ) : (
-                  <>
-                    <Share2 className="w-4 h-4" />
-                    <span>Share Profile</span>
-                  </>
-                )}
-              </Button>
-              <Link to="/upload">
-                <Button>
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload Certificate
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </div>
-
+    <div className="min-h-screen bg-gray-900">
+      <Navigation />
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Profile Header */}
-        <Card className="mb-8">
-          <CardContent className="pt-6">
-            <div className="flex items-start space-x-6">
-              <img
-                src={mockProfile.avatar}
-                alt={mockProfile.name}
-                className="w-24 h-24 rounded-full object-cover"
-              />
-              <div className="flex-1">
-                <div className="flex items-center space-x-3 mb-2">
-                  <h1 className="text-3xl font-bold text-gray-900">{mockProfile.name}</h1>
-                  <Badge variant="secondary">@{mockProfile.username}</Badge>
-                </div>
-                <p className="text-gray-600 mb-4 max-w-2xl">{mockProfile.bio}</p>
-                <div className="flex items-center space-x-6 text-sm text-gray-500">
-                  <div className="flex items-center space-x-1">
-                    <Calendar className="w-4 h-4" />
-                    <span>Joined {formatDate(mockProfile.joinDate)}</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <Building className="w-4 h-4" />
-                    <span>{mockProfile.totalCertificates} Certificates</span>
-                  </div>
-                  <div className="flex items-center space-x-1">
-                    <Eye className="w-4 h-4" />
-                    <span>{mockProfile.totalViews.toLocaleString()} Total Views</span>
-                  </div>
-                </div>
+        <div className="bg-gray-800 rounded-2xl p-8 border border-gray-700 mb-8">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between">
+            <div className="flex items-center space-x-6 mb-4 md:mb-0">
+              <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                {user.avatar}
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-white mb-1">{user.name}</h1>
+                <p className="text-blue-400 mb-2">@{user.username}</p>
+                <p className="text-gray-400 max-w-md">{user.bio}</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Certificates Grid */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Certificates</h2>
-            <div className="text-sm text-gray-500">
-              {mockCertificates.length} certificate{mockCertificates.length !== 1 ? 's' : ''}
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={copyProfileLink}
+                className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+              >
+                <Share2 className="w-4 h-4" />
+                <span>Share Profile</span>
+              </button>
+              <button className="flex items-center space-x-2 bg-gray-700 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors">
+                <Settings className="w-4 h-4" />
+                <span>Settings</span>
+              </button>
             </div>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {mockCertificates.map((cert) => (
-              <Card key={cert.id} className="group hover:shadow-lg transition-shadow duration-300 cursor-pointer">
-                <Link to={`/c/${cert.id}`}>
-                  <div className="aspect-video bg-gray-100 rounded-t-lg overflow-hidden">
-                    <img
-                      src={cert.thumbnail}
-                      alt={cert.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
-                </Link>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg leading-tight">
-                    <Link to={`/c/${cert.id}`} className="hover:text-blue-600 transition-colors">
-                      {cert.title}
-                    </Link>
-                  </CardTitle>
-                  <CardDescription className="flex items-center space-x-2 text-sm">
-                    <Building className="w-4 h-4" />
-                    <span>{cert.issuer}</span>
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">{cert.description}</p>
-                  <div className="flex items-center justify-between text-sm text-gray-500">
-                    <span>{formatDate(cert.dateIssued)}</span>
-                    <div className="flex items-center space-x-4">
-                      <div className="flex items-center space-x-1">
-                        <Eye className="w-4 h-4" />
-                        <span>{cert.views}</span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          copyToClipboard(`${window.location.origin}/c/${cert.id}`, cert.id);
-                        }}
-                        className="h-8 px-2"
-                      >
-                        {copiedLink === cert.id ? (
-                          <span className="text-green-600">Copied!</span>
-                        ) : (
-                          <Share2 className="w-4 h-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-6 mt-8 pt-6 border-t border-gray-700">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-white">{user.totalCertificates}</div>
+              <div className="text-gray-400">Certificates</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-white">{user.totalViews.toLocaleString()}</div>
+              <div className="text-gray-400">Total Views</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-white">{user.joinDate}</div>
+              <div className="text-gray-400">Member Since</div>
+            </div>
           </div>
         </div>
 
-        {/* Empty State for New Users */}
-        {mockCertificates.length === 0 && (
-          <Card className="text-center py-12">
-            <CardContent>
-              <Upload className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No certificates yet</h3>
-              <p className="text-gray-600 mb-6">Start building your professional portfolio by uploading your first certificate.</p>
-              <Link to="/upload">
-                <Button size="lg">
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload Your First Certificate
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
+        {/* Tabs */}
+        <div className="mb-8">
+          <div className="flex space-x-1 bg-gray-800 rounded-lg p-1 border border-gray-700">
+            <button
+              onClick={() => setActiveTab("certificates")}
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                activeTab === "certificates"
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-400 hover:text-white"
+              }`}
+            >
+              Certificates
+            </button>
+            <button
+              onClick={() => setActiveTab("settings")}
+              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                activeTab === "settings"
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-400 hover:text-white"
+              }`}
+            >
+              Settings
+            </button>
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === "certificates" && (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {certificates.map((cert) => (
+              <div key={cert.id} className="bg-gray-800 rounded-2xl p-6 border border-gray-700">
+                <div className="flex items-start justify-between mb-4">
+                  <Award className="w-8 h-8 text-blue-400" />
+                  <div className="flex items-center space-x-2">
+                    <div className={`w-2 h-2 rounded-full ${cert.isPublic ? 'bg-green-400' : 'bg-yellow-400'}`}></div>
+                    <span className="text-xs text-gray-400">
+                      {cert.isPublic ? 'Public' : 'Private'}
+                    </span>
+                  </div>
+                </div>
+
+                <h3 className="text-lg font-semibold text-white mb-3">{cert.title}</h3>
+
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center text-gray-400 text-sm">
+                    <Building className="w-4 h-4 mr-2" />
+                    {cert.issuer}
+                  </div>
+                  <div className="flex items-center text-gray-400 text-sm">
+                    <Calendar className="w-4 h-4 mr-2" />
+                    {new Date(cert.date).toLocaleDateString()}
+                  </div>
+                  <div className="flex items-center text-gray-400 text-sm">
+                    <Eye className="w-4 h-4 mr-2" />
+                    {cert.views} views
+                  </div>
+                </div>
+
+                <Link
+                  to={`/c/${cert.id}`}
+                  className="inline-flex items-center justify-center w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors"
+                >
+                  View Certificate
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {activeTab === "settings" && (
+          <div className="bg-gray-800 rounded-2xl p-8 border border-gray-700">
+            <h2 className="text-2xl font-bold text-white mb-6">Profile Settings</h2>
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Display Name</label>
+                <input
+                  type="text"
+                  defaultValue={user.name}
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Bio</label>
+                <textarea
+                  defaultValue={user.bio}
+                  rows={3}
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-300 mb-2">Email</label>
+                <input
+                  type="email"
+                  defaultValue={user.email}
+                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <button className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded-lg transition-colors">
+                Save Changes
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>
   );
 };
 
-export default ProfilePage;
+export default Profile;
