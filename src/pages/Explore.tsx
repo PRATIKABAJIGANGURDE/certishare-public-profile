@@ -6,7 +6,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
-interface CertificateWithProfile {
+interface Certificate {
   id: string;
   title: string;
   issuer: string;
@@ -14,11 +14,17 @@ interface CertificateWithProfile {
   views: number;
   file_type: string;
   description: string | null;
-  profiles: {
-    username: string;
-    display_name: string;
-    avatar_url: string | null;
-  } | null;
+  user_id: string;
+}
+
+interface Profile {
+  username: string;
+  display_name: string;
+  avatar_url: string | null;
+}
+
+interface CertificateWithProfile extends Certificate {
+  profiles: Profile | null;
 }
 
 const Explore = () => {
@@ -27,27 +33,60 @@ const Explore = () => {
   const { data: certificates = [], isLoading } = useQuery({
     queryKey: ['public-certificates'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      console.log('Fetching certificates...');
+      
+      // First, get all public certificates
+      const { data: certsData, error: certsError } = await supabase
         .from('certificates')
-        .select(`
-          *,
-          profiles (
-            username,
-            display_name,
-            avatar_url
-          )
-        `)
+        .select('*')
         .eq('is_public', true)
         .order('created_at', { ascending: false });
       
-      if (error) {
-        console.error('Error fetching certificates:', error);
-        throw error;
+      if (certsError) {
+        console.error('Error fetching certificates:', certsError);
+        throw certsError;
       }
+
+      if (!certsData || certsData.length === 0) {
+        console.log('No certificates found');
+        return [];
+      }
+
+      // Get unique user IDs
+      const userIds = [...new Set(certsData.map(cert => cert.user_id))];
+      console.log('User IDs:', userIds);
+
+      // Fetch profiles for these users
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, username, display_name, avatar_url')
+        .in('id', userIds);
+
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+        // Continue without profiles rather than throwing
+      }
+
+      console.log('Profiles data:', profilesData);
+
+      // Combine certificates with their profiles
+      const certificatesWithProfiles: CertificateWithProfile[] = certsData.map(cert => {
+        const profile = profilesData?.find(p => p.id === cert.user_id) || null;
+        return {
+          ...cert,
+          profiles: profile ? {
+            username: profile.username,
+            display_name: profile.display_name,
+            avatar_url: profile.avatar_url
+          } : null
+        };
+      });
+
+      // Filter out certificates without profiles
+      const validCertificates = certificatesWithProfiles.filter(cert => cert.profiles !== null);
+      console.log('Valid certificates:', validCertificates);
       
-      // Filter out certificates without valid profiles
-      const validCertificates = data?.filter(cert => cert.profiles && !Array.isArray(cert.profiles)) || [];
-      return validCertificates as CertificateWithProfile[];
+      return validCertificates;
     }
   });
 
