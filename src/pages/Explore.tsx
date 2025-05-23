@@ -1,81 +1,71 @@
 
 import { useState } from "react";
-import { Search, Eye, Award, Calendar, Building } from "lucide-react";
+import { Search, Eye, Award, Calendar, Building, User } from "lucide-react";
 import Navigation from "../components/Navigation";
 import { Link } from "react-router-dom";
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+
+interface CertificateWithProfile {
+  id: string;
+  title: string;
+  issuer: string;
+  issue_date: string;
+  views: number;
+  file_type: string;
+  description: string | null;
+  profiles: {
+    username: string;
+    display_name: string;
+    avatar_url: string | null;
+  };
+}
 
 const Explore = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Mock data for certificates
-  const certificates = [
-    {
-      id: "cert1",
-      title: "AWS Certified Solutions Architect",
-      issuer: "Amazon Web Services",
-      date: "2024-01-15",
-      username: "johndoe",
-      userAvatar: "JD",
-      views: 245,
-      type: "pdf"
-    },
-    {
-      id: "cert2",
-      title: "Google Cloud Professional",
-      issuer: "Google Cloud",
-      date: "2024-02-10",
-      username: "janesmithdev",
-      userAvatar: "JS",
-      views: 189,
-      type: "image"
-    },
-    {
-      id: "cert3",
-      title: "React Developer Certification",
-      issuer: "Meta",
-      date: "2024-03-05",
-      username: "devmaster",
-      userAvatar: "DM",
-      views: 156,
-      type: "pdf"
-    },
-    {
-      id: "cert4",
-      title: "Kubernetes Administrator",
-      issuer: "Cloud Native Computing Foundation",
-      date: "2024-01-20",
-      username: "cloudexpert",
-      userAvatar: "CE",
-      views: 312,
-      type: "pdf"
-    },
-    {
-      id: "cert5",
-      title: "Python Data Science",
-      issuer: "DataCamp",
-      date: "2024-02-28",
-      username: "datascientist",
-      userAvatar: "DS",
-      views: 98,
-      type: "image"
-    },
-    {
-      id: "cert6",
-      title: "Cybersecurity Specialist",
-      issuer: "CompTIA",
-      date: "2024-03-15",
-      username: "securitypro",
-      userAvatar: "SP",
-      views: 267,
-      type: "pdf"
+  const { data: certificates = [], isLoading } = useQuery({
+    queryKey: ['public-certificates'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('certificates')
+        .select(`
+          *,
+          profiles!inner (
+            username,
+            display_name,
+            avatar_url
+          )
+        `)
+        .eq('is_public', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data as CertificateWithProfile[];
     }
-  ];
+  });
 
   const filteredCertificates = certificates.filter(cert =>
     cert.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     cert.issuer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    cert.username.toLowerCase().includes(searchQuery.toLowerCase())
+    cert.profiles.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    cert.profiles.display_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-900">
+        <Navigation />
+        <div className="flex items-center justify-center h-96">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-900">
@@ -107,11 +97,15 @@ const Explore = () => {
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold">
-                    {cert.userAvatar}
+                    {cert.profiles.avatar_url ? (
+                      <img src={cert.profiles.avatar_url} alt={cert.profiles.display_name} className="w-10 h-10 rounded-full object-cover" />
+                    ) : (
+                      getInitials(cert.profiles.display_name)
+                    )}
                   </div>
                   <div>
-                    <Link to={`/u/${cert.username}`} className="text-white hover:text-blue-400 font-medium">
-                      @{cert.username}
+                    <Link to={`/u/${cert.profiles.username}`} className="text-white hover:text-blue-400 font-medium">
+                      {cert.profiles.display_name}
                     </Link>
                     <div className="flex items-center text-gray-400 text-sm mt-1">
                       <Eye className="w-3 h-3 mr-1" />
@@ -126,6 +120,10 @@ const Explore = () => {
                 {cert.title}
               </h3>
 
+              {cert.description && (
+                <p className="text-gray-400 text-sm mb-3 line-clamp-2">{cert.description}</p>
+              )}
+
               <div className="space-y-2 mb-4">
                 <div className="flex items-center text-gray-400 text-sm">
                   <Building className="w-4 h-4 mr-2" />
@@ -133,7 +131,7 @@ const Explore = () => {
                 </div>
                 <div className="flex items-center text-gray-400 text-sm">
                   <Calendar className="w-4 h-4 mr-2" />
-                  {new Date(cert.date).toLocaleDateString()}
+                  {new Date(cert.issue_date).toLocaleDateString()}
                 </div>
               </div>
 
@@ -148,11 +146,11 @@ const Explore = () => {
           ))}
         </div>
 
-        {filteredCertificates.length === 0 && (
+        {filteredCertificates.length === 0 && !isLoading && (
           <div className="text-center py-12">
             <Search className="w-12 h-12 text-gray-600 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-white mb-2">No certificates found</h3>
-            <p className="text-gray-400">Try adjusting your search query</p>
+            <p className="text-gray-400">Try adjusting your search query or check back later</p>
           </div>
         )}
       </div>

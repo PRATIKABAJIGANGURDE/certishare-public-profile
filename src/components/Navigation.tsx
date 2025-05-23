@@ -1,14 +1,18 @@
 
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Upload, Search, User, Award, LogOut } from "lucide-react";
+import { useAuth } from '@/hooks/useAuth';
 
 const Navigation = () => {
   const location = useLocation();
-  const navigate = useNavigate();
+  const { signOut } = useAuth();
 
-  const handleLogout = () => {
-    // In real app, handle logout
-    navigate("/login");
+  const handleLogout = async () => {
+    try {
+      await signOut();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   const navItems = [
