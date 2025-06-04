@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Share2, Download, Eye, Calendar, Building, Copy, ArrowLeft, FileText, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import PDFViewer from "@/components/PDFViewer";
 
 interface Certificate {
   id: string;
@@ -170,21 +170,21 @@ const CertificateView = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
       {/* Header */}
-      <div className="bg-white border-b">
+      <div className="bg-black/20 backdrop-blur border-b border-gray-700">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             {certificate.profiles ? (
               <Link 
                 to={`/u/${certificate.profiles.username}`} 
-                className="flex items-center text-blue-600 hover:text-blue-700"
+                className="flex items-center text-blue-400 hover:text-blue-300 transition-colors"
               >
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to {certificate.profiles.display_name}'s Profile
               </Link>
             ) : (
-              <Link to="/explore" className="flex items-center text-blue-600 hover:text-blue-700">
+              <Link to="/explore" className="flex items-center text-blue-400 hover:text-blue-300 transition-colors">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Explore
               </Link>
@@ -193,7 +193,7 @@ const CertificateView = () => {
               <Button
                 variant="outline"
                 onClick={copyToClipboard}
-                className="flex items-center space-x-2"
+                className="flex items-center space-x-2 border-gray-600 text-white hover:bg-gray-700"
               >
                 {copiedLink ? (
                   <>
@@ -207,7 +207,7 @@ const CertificateView = () => {
                   </>
                 )}
               </Button>
-              <Button variant="outline" onClick={downloadCertificate}>
+              <Button variant="outline" onClick={downloadCertificate} className="border-gray-600 text-white hover:bg-gray-700">
                 <Download className="w-4 h-4 mr-2" />
                 Download
               </Button>
@@ -218,15 +218,15 @@ const CertificateView = () => {
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Certificate Header */}
-        <Card className="mb-8">
+        <Card className="mb-8 bg-gray-900/50 backdrop-blur border-gray-700">
           <CardHeader>
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center space-x-3 mb-2">
                   {getFileIcon(certificate.file_type)}
-                  <CardTitle className="text-2xl">{certificate.title}</CardTitle>
+                  <CardTitle className="text-2xl text-white">{certificate.title}</CardTitle>
                 </div>
-                <CardDescription className="flex items-center space-x-4 mb-4">
+                <CardDescription className="flex items-center space-x-4 mb-4 text-gray-300">
                   <div className="flex items-center space-x-2">
                     <Building className="w-4 h-4" />
                     <span>{certificate.issuer}</span>
@@ -241,9 +241,9 @@ const CertificateView = () => {
                   </div>
                 </CardDescription>
                 {certificate.description && (
-                  <p className="text-gray-700 mb-4">{certificate.description}</p>
+                  <p className="text-gray-300 mb-4">{certificate.description}</p>
                 )}
-                <Badge variant="secondary">
+                <Badge variant="secondary" className="bg-blue-600 text-white">
                   {certificate.file_type === 'application/pdf' ? 'PDF Document' : 'Image File'}
                 </Badge>
               </div>
@@ -252,39 +252,36 @@ const CertificateView = () => {
         </Card>
 
         {/* Certificate Preview */}
-        <Card className="mb-8">
+        <Card className="mb-8 bg-gray-900/50 backdrop-blur border-gray-700">
           <CardHeader>
-            <CardTitle>Certificate Preview</CardTitle>
+            <CardTitle className="text-white">Certificate Preview</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="bg-gray-100 rounded-lg p-4 text-center">
-              {certificate.file_type === 'application/pdf' ? (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <FileText className="w-16 h-16 text-red-400 mb-4" />
-                  <p className="text-gray-600 mb-4">PDF Preview not available</p>
-                  <Button onClick={downloadCertificate}>
-                    <Download className="w-4 h-4 mr-2" />
-                    View PDF
-                  </Button>
-                </div>
-              ) : (
+            {certificate.file_type === 'application/pdf' ? (
+              <PDFViewer 
+                fileUrl={certificate.file_url} 
+                fileName={certificate.title}
+                className="w-full"
+              />
+            ) : (
+              <div className="bg-gray-800/50 rounded-lg p-4 text-center">
                 <img
                   src={certificate.file_url}
                   alt={certificate.title}
-                  className="max-w-full h-auto mx-auto rounded-lg shadow-lg"
+                  className="max-w-full h-auto mx-auto rounded-lg shadow-lg border border-gray-600"
                   style={{ maxHeight: '600px' }}
                   onError={(e) => {
                     console.error('Image failed to load:', certificate.file_url);
                     e.currentTarget.style.display = 'none';
                   }}
                 />
-              )}
-            </div>
+              </div>
+            )}
             <div className="mt-4 text-center">
-              <p className="text-sm text-gray-600 mb-4">
+              <p className="text-sm text-gray-400 mb-4">
                 Click download to access the full-resolution file.
               </p>
-              <Button onClick={downloadCertificate}>
+              <Button onClick={downloadCertificate} className="bg-blue-600 hover:bg-blue-700 text-white">
                 <Download className="w-4 h-4 mr-2" />
                 Download Certificate
               </Button>
@@ -294,9 +291,9 @@ const CertificateView = () => {
 
         {/* Owner Information */}
         {certificate.profiles && (
-          <Card className="mb-8">
+          <Card className="mb-8 bg-gray-900/50 backdrop-blur border-gray-700">
             <CardHeader>
-              <CardTitle>Certificate Owner</CardTitle>
+              <CardTitle className="text-white">Certificate Owner</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center space-x-4">
@@ -304,7 +301,7 @@ const CertificateView = () => {
                   <img
                     src={certificate.profiles.avatar_url}
                     alt={certificate.profiles.display_name}
-                    className="w-16 h-16 rounded-full object-cover"
+                    className="w-16 h-16 rounded-full object-cover border-2 border-blue-500"
                   />
                 ) : (
                   <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-xl">
@@ -312,11 +309,11 @@ const CertificateView = () => {
                   </div>
                 )}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">{certificate.profiles.display_name}</h3>
-                  <p className="text-gray-600">@{certificate.profiles.username}</p>
+                  <h3 className="text-lg font-semibold text-white">{certificate.profiles.display_name}</h3>
+                  <p className="text-gray-400">@{certificate.profiles.username}</p>
                   <Link
                     to={`/u/${certificate.profiles.username}`}
-                    className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+                    className="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors"
                   >
                     View all certificates →
                   </Link>
@@ -327,19 +324,19 @@ const CertificateView = () => {
         )}
 
         {/* Share Options */}
-        <Card>
+        <Card className="bg-gray-900/50 backdrop-blur border-gray-700">
           <CardHeader>
-            <CardTitle>Share This Certificate</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-white">Share This Certificate</CardTitle>
+            <CardDescription className="text-gray-300">
               Anyone with this link can view this certificate without needing to sign up
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex items-center space-x-3">
-              <div className="flex-1 p-3 bg-gray-100 rounded-lg font-mono text-sm text-gray-700 break-all">
+              <div className="flex-1 p-3 bg-gray-800 rounded-lg font-mono text-sm text-gray-300 break-all border border-gray-600">
                 {certificateUrl}
               </div>
-              <Button onClick={copyToClipboard} variant="outline">
+              <Button onClick={copyToClipboard} variant="outline" className="border-gray-600 text-white hover:bg-gray-700">
                 {copiedLink ? 'Copied!' : 'Copy Link'}
               </Button>
             </div>
