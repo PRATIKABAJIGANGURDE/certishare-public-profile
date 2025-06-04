@@ -6,8 +6,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download, Maximize2, Minimize2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-// Set up PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+// Set up PDF.js worker with a more reliable approach
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.js',
+  import.meta.url,
+).toString();
 
 interface PDFViewerProps {
   fileUrl: string;
@@ -28,6 +31,7 @@ const PDFViewer = ({ fileUrl, fileName, className = "" }: PDFViewerProps) => {
     setNumPages(numPages);
     setLoading(false);
     setError(null);
+    console.log('PDF loaded successfully with', numPages, 'pages');
   };
 
   const onDocumentLoadError = (error: Error) => {
@@ -74,6 +78,7 @@ const PDFViewer = ({ fileUrl, fileName, className = "" }: PDFViewerProps) => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <p className="text-white">{error}</p>
+            <p className="text-gray-400 text-sm mt-2">The PDF cannot be displayed in the browser.</p>
           </div>
           <Button onClick={downloadPDF} variant="outline" className="border-gray-600 text-white hover:bg-gray-700">
             <Download className="w-4 h-4 mr-2" />
@@ -173,6 +178,11 @@ const PDFViewer = ({ fileUrl, fileName, className = "" }: PDFViewerProps) => {
               onLoadError={onDocumentLoadError}
               loading=""
               className="max-w-full"
+              options={{
+                cMapUrl: 'https://unpkg.com/pdfjs-dist@4.8.69/cmaps/',
+                cMapPacked: true,
+                standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@4.8.69/standard_fonts/',
+              }}
             >
               <Page
                 pageNumber={pageNumber}
