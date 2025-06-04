@@ -6,69 +6,67 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Share2, Eye, Calendar, Building, Award, Copy } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
-// Mock data - in real app this would be fetched based on username
-const mockProfile = {
-  username: "johndoe",
-  name: "John Doe",
-  bio: "Senior Software Engineer passionate about cloud technologies and continuous learning. Always excited to explore new technologies and share knowledge with the community.",
-  avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face",
-  joinDate: "2024-01-15",
-  totalCertificates: 4,
-  totalViews: 1247,
-  isPublic: true
-};
+interface Profile {
+  id: string;
+  username: string;
+  display_name: string;
+  bio: string | null;
+  avatar_url: string | null;
+  created_at: string;
+}
 
-const mockCertificates = [
-  {
-    id: "cert-1",
-    title: "AWS Certified Solutions Architect - Associate",
-    issuer: "Amazon Web Services",
-    dateIssued: "2024-03-15",
-    description: "Validates technical expertise in designing distributed applications on AWS.",
-    thumbnail: "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=300&h=200&fit=crop",
-    type: "pdf",
-    views: 324,
-    isPublic: true
-  },
-  {
-    id: "cert-2",
-    title: "React Developer Certification",
-    issuer: "Meta",
-    dateIssued: "2024-02-10",
-    description: "Professional React development skills certification from Meta.",
-    thumbnail: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=300&h=200&fit=crop",
-    type: "pdf",
-    views: 186,
-    isPublic: true
-  },
-  {
-    id: "cert-3",
-    title: "Google Cloud Professional Cloud Architect",
-    issuer: "Google Cloud",
-    dateIssued: "2024-01-22",
-    description: "Demonstrates ability to design, develop, and manage robust, secure cloud architecture.",
-    thumbnail: "https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=300&h=200&fit=crop",
-    type: "pdf",
-    views: 298,
-    isPublic: true
-  },
-  {
-    id: "cert-4",
-    title: "Kubernetes Administrator (CKA)",
-    issuer: "Cloud Native Computing Foundation",
-    dateIssued: "2023-11-08",
-    description: "Certified Kubernetes Administrator credential validates skills in cluster administration.",
-    thumbnail: "https://images.unsplash.com/photo-1667372393119-3d4c48d07fc9?w=300&h=200&fit=crop",
-    type: "pdf",
-    views: 156,
-    isPublic: true
-  }
-];
+interface Certificate {
+  id: string;
+  title: string;
+  issuer: string;
+  issue_date: string;
+  views: number;
+  file_type: string;
+  is_public: boolean;
+  description: string | null;
+}
 
 const PublicProfile = () => {
   const { username } = useParams();
   const [copiedLink, setCopiedLink] = useState("");
+
+  // Fetch user profile by username
+  const { data: profile, isLoading: profileLoading, error: profileError } = useQuery({
+    queryKey: ['publicProfile', username],
+    queryFn: async () => {
+      if (!username) return null;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('username', username)
+        .single();
+      
+      if (error) throw error;
+      return data as Profile;
+    },
+    enabled: !!username
+  });
+
+  // Fetch user's public certificates
+  const { data: certificates = [] } = useQuery({
+    queryKey: ['publicCertificates', profile?.id],
+    queryFn: async () => {
+      if (!profile?.id) return [];
+      const { data, error } = await supabase
+        .from('certificates')
+        .select('*')
+        .eq('user_id', profile.id)
+        .eq('is_public', true)
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data as Certificate[];
+    },
+    enabled: !!profile?.id
+  });
 
   const profileUrl = `${window.location.origin}/u/${username}`;
 
@@ -86,7 +84,21 @@ const PublicProfile = () => {
     });
   };
 
-  if (!mockProfile.isPublic) {
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase();
+  };
+
+  const totalViews = certificates.reduce((sum, cert) => sum + cert.views, 0);
+
+  if (profileLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (profileError || !profile) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <Card className="w-full max-w-md text-center">
@@ -139,29 +151,35 @@ const PublicProfile = () => {
         <Card className="mb-8">
           <CardContent className="pt-6">
             <div className="flex items-start space-x-6">
-              <img
-                src={mockProfile.avatar}
-                alt={mockProfile.name}
-                className="w-24 h-24 rounded-full object-cover"
-              />
+              <div className="w-24 h-24 bg-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                {profile.avatar_url ? (
+                  <img
+                    src={profile.avatar_url}
+                    alt={profile.display_name}
+                    className="w-24 h-24 rounded-full object-cover"
+                  />
+                ) : (
+                  getInitials(profile.display_name)
+                )}
+              </div>
               <div className="flex-1">
                 <div className="flex items-center space-x-3 mb-2">
-                  <h1 className="text-3xl font-bold text-gray-900">{mockProfile.name}</h1>
-                  <Badge variant="secondary">@{mockProfile.username}</Badge>
+                  <h1 className="text-3xl font-bold text-gray-900">{profile.display_name}</h1>
+                  <Badge variant="secondary">@{profile.username}</Badge>
                 </div>
-                <p className="text-gray-600 mb-4 max-w-2xl">{mockProfile.bio}</p>
+                <p className="text-gray-600 mb-4 max-w-2xl">{profile.bio || "No bio added yet."}</p>
                 <div className="flex items-center space-x-6 text-sm text-gray-500">
                   <div className="flex items-center space-x-1">
                     <Calendar className="w-4 h-4" />
-                    <span>Joined {formatDate(mockProfile.joinDate)}</span>
+                    <span>Joined {formatDate(profile.created_at)}</span>
                   </div>
                   <div className="flex items-center space-x-1">
                     <Building className="w-4 h-4" />
-                    <span>{mockProfile.totalCertificates} Certificates</span>
+                    <span>{certificates.length} Certificates</span>
                   </div>
                   <div className="flex items-center space-x-1">
                     <Eye className="w-4 h-4" />
-                    <span>{mockProfile.totalViews.toLocaleString()} Total Views</span>
+                    <span>{totalViews.toLocaleString()} Total Views</span>
                   </div>
                 </div>
               </div>
@@ -179,7 +197,7 @@ const PublicProfile = () => {
               <p className="text-gray-600 mb-4">
                 Join CertShare and start sharing your professional achievements with the world
               </p>
-              <Link to="/signup">
+              <Link to="/login">
                 <Button>
                   <Award className="w-4 h-4 mr-2" />
                   Get Started for Free
@@ -192,65 +210,71 @@ const PublicProfile = () => {
         {/* Certificates Grid */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900">Certificates</h2>
+            <h2 className="text-2xl font-bold text-gray-900">Public Certificates</h2>
             <div className="text-sm text-gray-500">
-              {mockCertificates.length} certificate{mockCertificates.length !== 1 ? 's' : ''}
+              {certificates.length} public certificate{certificates.length !== 1 ? 's' : ''}
             </div>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {mockCertificates.map((cert) => (
-              <Card key={cert.id} className="group hover:shadow-lg transition-shadow duration-300 cursor-pointer">
-                <Link to={`/c/${cert.id}`}>
-                  <div className="aspect-video bg-gray-100 rounded-t-lg overflow-hidden">
-                    <img
-                      src={cert.thumbnail}
-                      alt={cert.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  </div>
-                </Link>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg leading-tight">
-                    <Link to={`/c/${cert.id}`} className="hover:text-blue-600 transition-colors">
-                      {cert.title}
-                    </Link>
-                  </CardTitle>
-                  <CardDescription className="flex items-center space-x-2 text-sm">
-                    <Building className="w-4 h-4" />
-                    <span>{cert.issuer}</span>
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">{cert.description}</p>
-                  <div className="flex items-center justify-between text-sm text-gray-500">
-                    <span>{formatDate(cert.dateIssued)}</span>
-                    <div className="flex items-center space-x-4">
-                      <div className="flex items-center space-x-1">
-                        <Eye className="w-4 h-4" />
-                        <span>{cert.views}</span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          copyToClipboard(`${window.location.origin}/c/${cert.id}`, cert.id);
-                        }}
-                        className="h-8 px-2"
-                      >
-                        {copiedLink === cert.id ? (
-                          <span className="text-green-600">Copied!</span>
-                        ) : (
-                          <Share2 className="w-4 h-4" />
-                        )}
-                      </Button>
+          {certificates.length === 0 ? (
+            <Card className="text-center py-12">
+              <CardContent>
+                <Award className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No public certificates</h3>
+                <p className="text-gray-600">This user hasn't shared any public certificates yet.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {certificates.map((cert) => (
+                <Card key={cert.id} className="group hover:shadow-lg transition-shadow duration-300 cursor-pointer">
+                  <Link to={`/c/${cert.id}`}>
+                    <div className="aspect-video bg-gray-100 rounded-t-lg overflow-hidden flex items-center justify-center">
+                      <Award className="w-16 h-16 text-gray-400" />
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </Link>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-lg leading-tight">
+                      <Link to={`/c/${cert.id}`} className="hover:text-blue-600 transition-colors">
+                        {cert.title}
+                      </Link>
+                    </CardTitle>
+                    <CardDescription className="flex items-center space-x-2 text-sm">
+                      <Building className="w-4 h-4" />
+                      <span>{cert.issuer}</span>
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">{cert.description || "No description provided."}</p>
+                    <div className="flex items-center justify-between text-sm text-gray-500">
+                      <span>{formatDate(cert.issue_date)}</span>
+                      <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-1">
+                          <Eye className="w-4 h-4" />
+                          <span>{cert.views}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            copyToClipboard(`${window.location.origin}/c/${cert.id}`, cert.id);
+                          }}
+                          className="h-8 px-2"
+                        >
+                          {copiedLink === cert.id ? (
+                            <span className="text-green-600">Copied!</span>
+                          ) : (
+                            <Share2 className="w-4 h-4" />
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Powered by CertShare */}
