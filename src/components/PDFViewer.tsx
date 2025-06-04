@@ -6,11 +6,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download, Maximize2, Minimize2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-// Set up PDF.js worker with a more reliable approach
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.js',
-  import.meta.url,
-).toString();
+// Set up PDF.js worker using a reliable CDN
+pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 interface PDFViewerProps {
   fileUrl: string;
@@ -178,11 +175,6 @@ const PDFViewer = ({ fileUrl, fileName, className = "" }: PDFViewerProps) => {
               onLoadError={onDocumentLoadError}
               loading=""
               className="max-w-full"
-              options={{
-                cMapUrl: 'https://unpkg.com/pdfjs-dist@4.8.69/cmaps/',
-                cMapPacked: true,
-                standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@4.8.69/standard_fonts/',
-              }}
             >
               <Page
                 pageNumber={pageNumber}
